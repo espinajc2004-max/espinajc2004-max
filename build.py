@@ -29,8 +29,6 @@ STACK = [
     ("Services", [("Better Auth", "betterauth"), ("Resend", "resend")]),
 ]
 
-SHARE_ROW = {"Cloud"}  # sits beside AI instead of taking its own short row
-
 _cache = {}
 SI = "https://cdn.jsdelivr.net/npm/simple-icons@latest"
 def fetch(url):
@@ -82,61 +80,68 @@ assert contrast("#000000", "#ffffff") > 20 and contrast(readable("#F7DF1E", "#e4
 assert contrast(readable("#000000", "#0b2a45"), "#0b2a45") >= 3
 
 
-def svg(w, h, body, title):
+def svg(w, h, body, title, css=""):
+    style = f"<style>{css}@media (prefers-reduced-motion: reduce){{*{{animation:none!important}}}}</style>" if css else ""
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" role="img">'
-            f'<title>{escape(title)}</title>{body}</svg>')
+            f'<title>{escape(title)}</title>{style}{body}</svg>')
 
 
 def hero(t):
     W, H = 900, 240
-    b = [f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>']
-    # Depth contours on the right: a nod to the Lagoon / Deep sea theme names.
+    css = []
+    b = [f'<defs><clipPath id="card"><rect width="{W}" height="{H}" rx="18"/></clipPath>'
+         f'<linearGradient id="fade"><stop offset="0" stop-color="{t["bg"]}"/>'
+         f'<stop offset="1" stop-color="{t["bg"]}" stop-opacity="0"/></linearGradient></defs>',
+         f'<g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="{t["bg"]}"/>']
+    # Depth contours that drift sideways, each at its own speed: a nod to the Lagoon / Deep sea themes.
     for k in range(11):
-        y0, amp = 36 + k * 18, 10 + k * 1.4
-        pts = " ".join(f"{x},{y0 + amp * math.sin(x / (38 + k * 3) + k * .7):.1f}" for x in range(560, W + 1, 8))
+        y0, amp, s = 36 + k * 18, 10 + k * 1.4, 38 + k * 3
+        period = 2 * math.pi * s  # sin(x/s) repeats every 2*pi*s, so sliding by one period loops seamlessly
+        pts = " ".join(f"{x},{y0 + amp * math.sin(x / s + k * .7):.1f}" for x in range(500, int(W + period) + 9, 8))
         color, op = (t["accent"], .9) if k == 6 else (t["border"], .35 + k * .05)
-        b.append(f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="{2 if k == 6 else 1.2}" opacity="{op:.2f}"/>')
-    b.append(f'<rect x="540" width="120" height="{H}" fill="url(#fade)"/>')
-    b.insert(0, f'<defs><linearGradient id="fade"><stop offset="0" stop-color="{t["bg"]}"/>'
-                f'<stop offset="1" stop-color="{t["bg"]}" stop-opacity="0"/></linearGradient></defs>')
+        css.append(f"@keyframes w{k}{{to{{transform:translateX(-{period:.1f}px)}}}}"
+                   f".w{k}{{animation:w{k} {18 + k * 3}s linear infinite}}")
+        b.append(f'<polyline class="w{k}" points="{pts}" fill="none" stroke="{color}" '
+                 f'stroke-width="{2 if k == 6 else 1.2}" opacity="{op:.2f}"/>')
+    b.append(f'<rect width="560" height="{H}" fill="{t["bg"]}"/><rect x="560" width="140" height="{H}" fill="url(#fade)"/></g>')
     b.append(f'<text x="48" y="92" font-family="{FONT}" font-size="46" font-weight="700" fill="{t["fg"]}" letter-spacing="-1">John Carlo Espina</text>')
     b.append(f'<text x="48" y="132" font-family="{FONT}" font-size="20" fill="{t["fg"]}">Full-stack developer, from the interface down to the database.</text>')
     b.append(f'<text x="48" y="166" font-family="{FONT}" font-size="15" fill="{t["muted"]}">Computer Science student in San Jose del Monte, Bulacan.</text>')
     b.append(f'<text x="48" y="188" font-family="{FONT}" font-size="15" fill="{t["muted"]}">Interning now, still upskilling, and open to work.</text>')
-    return svg(W, H, "".join(b), "John Carlo Espina, full-stack developer")
+    return svg(W, H, "".join(b), "John Carlo Espina, full-stack developer", "".join(css))
 
 
 def stack(t):
-    W, PAD, ROW, LABEL_W, SLOT = 900, 36, 84, 170, 92
-    rows = []  # groups in SHARE_ROW sit beside the group before them
-    for group in STACK:
-        if group[0] in SHARE_ROW:
-            rows[-1].append(group)
-        else:
-            rows.append([group])
-    H = PAD * 2 + ROW * len(rows)
-    b = [f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>']
-    for r, row in enumerate(rows):
-        top = PAD + r * ROW
-        if r:
-            b.append(f'<line x1="{PAD}" x2="{W - PAD}" y1="{top}" y2="{top}" stroke="{t["border"]}"/>')
-        mid, x = top + ROW / 2, PAD
-        for g, (group, items) in enumerate(row):
-            lw = LABEL_W if g == 0 else LABEL_W - 60  # a group sharing a row needs less label room
-            b.append(f'<text x="{x}" y="{mid + 5}" font-family="{FONT}" font-size="15" font-weight="600" fill="{t["fg"]}">{group}</text>')
-            assert x + lw + len(items) * SLOT <= W - PAD + 10, f"{group} row too wide"
-            for i, (name, slug) in enumerate(items):
-                cx, iy = x + lw + i * SLOT + SLOT / 2, mid - 24
-                if slug:
-                    path, brand = logo(slug)
-                    b.append(f'<path transform="translate({cx - 13} {iy}) scale({26 / 24})" fill="{t["fg"] if mono(brand) else readable(brand, t["bg"])}" d="{path}"/>')
-                else:  # code glyph in VS Code blue
-                    b.append(f'<path transform="translate({cx - 13} {iy}) scale({26 / 24})" fill="none" stroke="{readable("#007ACC", t["bg"])}" '
-                             f'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 5 2 12l6 7M16 5l6 7-6 7"/>')
-                b.append(f'<text x="{cx}" y="{mid + 22}" text-anchor="middle" font-family="{FONT}" font-size="11.5" fill="{t["muted"]}">{escape(name)}</text>')
-            x += lw + len(items) * SLOT + 50
-    names = ", ".join(n for _, items in STACK for n, _ in items)
-    return svg(W, H, "".join(b), f"Tech stack: {names}")
+    items = [it for _, group in STACK for it in group]
+    COLS, TILE = 10, 90
+    rows = math.ceil(len(items) / COLS)
+    W, H = COLS * TILE, rows * TILE
+    # A soft light crosses the tiles on a diagonal, echoing the hero's drifting waves.
+    css = (f"@keyframes glow{{0%,100%{{opacity:0}}8%{{opacity:.18}}20%{{opacity:0}}}}"
+           f".g{{opacity:0;animation:glow 7s ease-in-out infinite}}")
+    b = [f'<defs><clipPath id="card"><rect width="{W}" height="{H}" rx="18"/></clipPath></defs>',
+         f'<g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="{t["bg"]}"/>']
+    for i, (name, slug) in enumerate(items):
+        r, c = divmod(i, COLS)
+        x, y = c * TILE, r * TILE
+        cx = x + TILE / 2
+        b.append(f'<rect class="g" style="animation-delay:{(r + c) * .14:.2f}s" x="{x}" y="{y}" width="{TILE}" height="{TILE}" fill="{t["accent"]}"/>')
+        if slug:
+            path, brand = logo(slug)
+            b.append(f'<path transform="translate({cx - 15} {y + 18}) scale({30 / 24})" '
+                     f'fill="{t["fg"] if mono(brand) else readable(brand, t["bg"])}" d="{path}"/>')
+        else:  # code glyph in VS Code blue
+            b.append(f'<path transform="translate({cx - 15} {y + 18}) scale({30 / 24})" fill="none" stroke="{readable("#007ACC", t["bg"])}" '
+                     f'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 5 2 12l6 7M16 5l6 7-6 7"/>')
+        size = 11 if len(name) <= 12 else 9.5
+        b.append(f'<text x="{cx}" y="{y + 72}" text-anchor="middle" font-family="{FONT}" font-size="{size}" fill="{t["muted"]}">{escape(name)}</text>')
+    # Seams between the tiles, so they read as one block of cubes pressed together.
+    for c in range(1, COLS):
+        b.append(f'<line x1="{c * TILE}" x2="{c * TILE}" y1="0" y2="{H}" stroke="{t["border"]}"/>')
+    for r in range(1, rows):
+        b.append(f'<line x1="0" x2="{W}" y1="{r * TILE}" y2="{r * TILE}" stroke="{t["border"]}"/>')
+    b.append("</g>")
+    return svg(W, H, "".join(b), "Tech stack: " + ", ".join(n for n, _ in items), css)
 
 
 for mode, t in THEMES.items():

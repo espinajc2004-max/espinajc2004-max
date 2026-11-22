@@ -3,7 +3,7 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import json, math, pathlib, re, urllib.request
+import json, math, pathlib, random, re, subprocess, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
@@ -144,7 +144,91 @@ def stack(t):
     return svg(W, H, "".join(b), "Tech stack: " + ", ".join(n for n, _ in items), css)
 
 
+USER = "espinajc2004-max"
+
+
+def contributions():
+    """Last year's contribution total via the gh CLI (your gh login locally, GH_TOKEN in the Action)."""
+    q = "query($login:String!){user(login:$login){contributionsCollection{contributionCalendar{totalContributions}}}}"
+    out = subprocess.run(["gh", "api", "graphql", "-f", f"query={q}", "-F", f"login={USER}"],
+                         capture_output=True, text=True, check=True).stdout
+    return json.loads(out)["data"]["user"]["contributionsCollection"]["contributionCalendar"]["totalContributions"]
+
+
+def koi_count(total):
+    return max(3, min(14, total // 10 + 1))  # one koi per 10 contributions, kept between 3 and 14
+
+
+assert [koi_count(n) for n in (0, 79, 500)] == [3, 8, 14]
+
+POND = {"light": dict(water="#cfe3df", deep="#b9d6d1", pad="#7fb069", pad2="#5f9450", ripple="#ffffff"),
+        "dark": dict(water="#0b2a45", deep="#082036", pad="#3f7d4f", pad2="#2f6340", ripple="#4fb3b0")}
+WHITE, RED, INK, GOLD, ORANGE = "#f6f1e7", "#e0482a", "#1c1c1c", "#e8b23a", "#ef8a2f"
+# Koi varieties: body colour, then patches (cx, cy, rx, ry, colour) in the fish's own coordinates (head at +x).
+VARIETIES = [
+    ("Kohaku", WHITE, [(14, -2, 9, 6, RED), (-2, 3, 8, 5, RED), (-14, -1, 5, 4, RED)]),
+    ("Sanke", WHITE, [(12, 1, 8, 6, RED), (-6, -3, 7, 5, RED), (4, 4, 2.5, 2, INK), (-12, 2, 2.5, 2, INK)]),
+    ("Showa", INK, [(14, 1, 8, 6, RED), (-3, -3, 7, 5, RED), (2, 4, 6, 3, WHITE)]),
+    ("Ogon", GOLD, [(4, 0, 18, 2.2, "#f6d77a")]),
+    ("Tancho", WHITE, [(17, 0, 4.5, 4.5, RED)]),
+    ("Kigoi", ORANGE, [(4, 0, 16, 2, "#f5a85a")]),
+]
+BODY = "M26 0C26-8 12-11 0-10C-10-9-18-5-22 0C-18 5-10 9 0 10C12 11 26 8 26 0Z"
+
+
+def koi(variety, scale, dur, begin, loop, wiggle):
+    name, body, patches = variety
+    fin = f'fill="{body}" opacity=".75"'
+    spots = "".join(f'<ellipse cx="{x}" cy="{y}" rx="{rx}" ry="{ry}" fill="{c}"/>' for x, y, rx, ry, c in patches)
+    return (
+        f'<g><animateMotion path="{loop}" dur="{dur}s" begin="-{begin:.1f}s" repeatCount="indefinite" rotate="auto"/>'
+        f'<g transform="scale({scale:.2f})">'
+        f'<animateTransform attributeName="transform" type="rotate" additive="sum" values="-4;4;-4" dur="{wiggle}s" repeatCount="indefinite"/>'
+        f'<ellipse cx="2" cy="7" rx="24" ry="9" fill="#000" opacity=".12"/>'  # shadow on the pond floor
+        f'<g><animateTransform attributeName="transform" type="rotate" values="-16 -20 0;16 -20 0;-16 -20 0" dur="{wiggle}s" repeatCount="indefinite"/>'
+        f'<path d="M-20 0Q-31-12-41-10Q-35 0-41 10Q-31 12-20 0Z" {fin}/></g>'
+        f'<ellipse cx="11" cy="-11" rx="6" ry="3" transform="rotate(-35 11 -11)" {fin}/>'
+        f'<ellipse cx="11" cy="11" rx="6" ry="3" transform="rotate(35 11 11)" {fin}/>'
+        f'<path d="{BODY}" fill="{body}" stroke="#000" stroke-opacity=".18" stroke-width=".8"/>'
+        f'<g clip-path="url(#kb)">{spots}</g>'
+        f'<circle cx="21" cy="-4" r="1.2" fill="{INK}"/><circle cx="21" cy="4" r="1.2" fill="{INK}"/>'
+        f'</g></g>')
+
+
+def pond(t, mode, total):
+    W, H, M = 900, 260, 34
+    p, rnd = POND[mode], random.Random(7)  # fixed seed: same pond every build
+    n = koi_count(total)
+    b = [f'<defs><clipPath id="card"><rect width="{W}" height="{H}" rx="18"/></clipPath>'
+         f'<clipPath id="kb"><path d="{BODY}"/></clipPath>'
+         f'<radialGradient id="depth" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="{p["water"]}"/>'
+         f'<stop offset="1" stop-color="{p["deep"]}"/></radialGradient></defs>',
+         f'<g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="url(#depth)"/>']
+    for i in range(5):  # ripples
+        x, y = rnd.uniform(80, W - 80), rnd.uniform(50, H - 50)
+        b.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="2" fill="none" stroke="{p["ripple"]}" stroke-width="1.2">'
+                 f'<animate attributeName="r" values="2;34" dur="5s" begin="{i * 1.1:.1f}s" repeatCount="indefinite"/>'
+                 f'<animate attributeName="opacity" values=".5;0" dur="5s" begin="{i * 1.1:.1f}s" repeatCount="indefinite"/></circle>')
+    for i in range(n):
+        rx, ry = rnd.uniform(90, 300), rnd.uniform(30, 80)
+        cx, cy = rnd.uniform(M + rx, W - M - rx), rnd.uniform(M + ry, H - M - ry)
+        sweep = i % 2  # half swim clockwise, half counter-clockwise
+        loop = f"M{cx + rx:.0f} {cy:.0f}A{rx:.0f} {ry:.0f} 0 1 {sweep} {cx - rx:.0f} {cy:.0f}A{rx:.0f} {ry:.0f} 0 1 {sweep} {cx + rx:.0f} {cy:.0f}"
+        dur = rnd.uniform(22, 40)
+        b.append(koi(VARIETIES[i % len(VARIETIES)], rnd.uniform(.8, 1.15), f"{dur:.1f}", rnd.uniform(0, dur), loop, f"{rnd.uniform(1, 1.6):.2f}"))
+    for cx, cy, r, rot in ((96, 58, 30, 20), (812, 200, 36, 200), (700, 46, 20, 110), (180, 214, 22, 300)):  # lily pads over the koi
+        a1, a2 = math.radians(rot), math.radians(rot + 330)
+        b.append(f'<path d="M{cx} {cy}L{cx + r * math.cos(a1):.1f} {cy + r * math.sin(a1):.1f}'
+                 f'A{r} {r} 0 1 1 {cx + r * math.cos(a2):.1f} {cy + r * math.sin(a2):.1f}Z" fill="{p["pad"]}"/>'
+                 f'<circle cx="{cx}" cy="{cy}" r="{r * .55:.1f}" fill="none" stroke="{p["pad2"]}" stroke-width="1"/>')
+    b.append(f'<text x="{W - 24}" y="{H - 18}" text-anchor="end" font-family="{FONT}" font-size="12" fill="{t["muted"]}">'
+             f'{n} koi, one for every 10 of my {total} contributions in the past year</text></g>')
+    return svg(W, H, "".join(b), f"An animated koi pond with {n} koi, one for every 10 of {total} GitHub contributions this year")
+
+
+total = contributions()
 for mode, t in THEMES.items():
     (OUT / f"hero-{mode}.svg").write_text(hero(t), encoding="utf-8")
     (OUT / f"stack-{mode}.svg").write_text(stack(t), encoding="utf-8")
+    (OUT / f"pond-{mode}.svg").write_text(pond(t, mode, total), encoding="utf-8")
     print("built", mode)

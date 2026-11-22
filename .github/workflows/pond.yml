@@ -1,0 +1,36 @@
+# Rebuilds the profile images every night so the koi pond follows my contributions (one koi per 10).
+name: Koi pond
+
+on:
+  schedule:
+    - cron: "20 0 * * *"
+  workflow_dispatch:
+  push:
+    paths: [build.py, .github/workflows/pond.yml]
+
+permissions:
+  contents: write
+
+concurrency: pond
+
+jobs:
+  pond:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build images
+        run: python3 build.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Commit the images if they changed
+        shell: bash
+        run: |
+          git add assets
+          if git diff --cached --quiet; then
+            echo "Images unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet --message "pond: rebuild for today's contributions"
+          git push --quiet

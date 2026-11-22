@@ -17,4 +17,4 @@
 ### Activity
 
 <!-- The koi is drawn nightly from my GitHub activity by .github/workflows/koi.yml (git-koi) -->
-<img src="koi/koi.gif" width="100%" alt="A pixel-art koi drawn from my GitHub activity" />
+<p align="center"><img src="koi/koi.gif" width="256" alt="A pixel-art koi drawn from my GitHub activity" /></p>

@@ -22,8 +22,6 @@ jobs:
       - uses: yalongwastaken/git-koi@v1
         with:
           body: asagi
-          size: 768x256
-          scale: 1
           output-dir: koi
       - name: Commit the koi if it changed
         shell: bash

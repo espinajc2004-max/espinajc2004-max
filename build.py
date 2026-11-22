@@ -19,14 +19,14 @@ FONT = "Archivo, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
 STACK = [
     ("Languages", [("JavaScript", "javascript"), ("TypeScript", "typescript"), ("HTML", "html5"), ("CSS", "css")]),
     ("Frontend", [("Next.js", "nextdotjs"), ("React", "react"), ("Tailwind CSS", "tailwindcss"), ("shadcn/ui", "shadcnui"),
-                  ("styled-components", "styledcomponents"), ("GSAP", "gsap"), ("Three.js", "threedotjs")]),
+                  ("styled-components", "styledcomponents")]),
     ("Backend", [("Node.js", "nodedotjs"), ("Express", "express"), ("Hono", "hono"), ("Prisma", "prisma"),
                  ("Drizzle ORM", "drizzle"), ("Zod", "zod")]),
     ("Database", [("PostgreSQL", "postgresql"), ("Neon", "neon"), ("Supabase", "supabase"), ("MongoDB", "mongodb")]),
-    ("AI", [("Claude", "claude"), ("OpenAI", "openai")]),
+    ("AI", [("OpenAI", "openai")]),
     ("Cloud", [("Vercel", "vercel"), ("Cloudflare", "cloudflare")]),
     ("Tools", [("Git", "git"), ("GitHub", "github"), ("VS Code", None), ("Cursor", "cursor"), ("Postman", "postman"), ("npm", "npm")]),
-    ("Services", [("Better Auth", "betterauth"), ("Stripe", "stripe"), ("Resend", "resend")]),
+    ("Services", [("Better Auth", "betterauth"), ("Resend", "resend")]),
 ]
 
 SHARE_ROW = {"Cloud"}  # sits beside AI instead of taking its own short row

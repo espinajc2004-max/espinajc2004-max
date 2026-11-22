@@ -11,19 +11,5 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./assets/stack-dark.svg" />
-  <img width="100%" alt="Languages: JavaScript, TypeScript, HTML, CSS. Frontend: Next.js, React, Tailwind CSS, shadcn/ui, styled-components, GSAP, Three.js. Backend: Node.js, Express, Hono, Prisma, Drizzle ORM, Zod. Database: PostgreSQL, Neon, Supabase, MongoDB. AI: Claude, OpenAI. Cloud: Vercel, Cloudflare. Tools: Git, GitHub, VS Code, Cursor, Postman, npm. Services: Better Auth, Stripe, Resend." src="./assets/stack-light.svg" />
+  <img width="100%" alt="Languages: JavaScript, TypeScript, HTML, CSS. Frontend: Next.js, React, Tailwind CSS, shadcn/ui, styled-components. Backend: Node.js, Express, Hono, Prisma, Drizzle ORM, Zod. Database: PostgreSQL, Neon, Supabase, MongoDB. AI: OpenAI. Cloud: Vercel, Cloudflare. Tools: Git, GitHub, VS Code, Cursor, Postman, npm. Services: Better Auth, Resend." src="./assets/stack-light.svg" />
 </picture>
-
-### Projects
-
-**[StackPack CLI](https://github.com/espinajc2004-max/StackPack)**<br />
-A terminal tool that scaffolds JavaScript and TypeScript projects and wires in the integrations you pick. Published on npm.
-
-**Pollen**<br />
-An AI study app. Upload a lecture PDF or photo and it writes quizzes, flashcards and notes, each answer linked to the page it came from.
-
-**PistachiUI**<br />
-An open-source component library on the shadcn registry, with its own look.
-
-**Auggregates**<br />
-Our thesis. A web and mobile operations system for an aggregates supplier, with an AI assistant, machine-learning budget forecasts and over a thousand tests.

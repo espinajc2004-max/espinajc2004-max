@@ -12,12 +12,22 @@
 
 <h3 align="center">About Me</h3>
 
-<p align="center">
-  BS Computer Science student from <b>San Jose del Monte, Bulacan</b>.<br />
-  I build for the web, from the interface down to the database.<br />
-  For our thesis we shipped a platform with machine-learning forecasts and over a thousand tests.<br />
-  Interning right now, still upskilling, and <b>open to work</b>.
-</p>
+<table align="center">
+  <tr>
+    <td width="60%" valign="top">
+      Hi, I'm <b>Jc</b>, a Computer Science student who builds for the web, from the interface down to the database.
+      <br /><br />
+      For our thesis we shipped a platform with machine-learning forecasts and over a thousand tests.
+      Now I'm interning and still upskilling, always <b>open to work</b> that pushes me further.
+    </td>
+    <td width="40%" valign="top">
+      <sub>STUDYING</sub><br /><b>BS Computer Science</b><br /><br />
+      <sub>BASED IN</sub><br /><b>San Jose del Monte, Bulacan</b><br /><br />
+      <sub>RIGHT NOW</sub><br /><b>Interning, and upskilling</b><br /><br />
+      <sub>FOCUS</sub><br /><b>Full-stack web, applied ML</b>
+    </td>
+  </tr>
+</table>
 
 <br />
 
@@ -25,8 +35,8 @@
 
 <table align="center">
   <tr>
-    <td align="center" width="140"><b>Frontend</b></td>
-    <td>
+    <td align="center" colspan="2">
+      <sub>FRONTEND</sub><br /><br />
       <img src="https://skillicons.dev/icons?i=nextjs" width="44" title="Next.js" alt="Next.js" />
       <img src="https://skillicons.dev/icons?i=react" width="44" title="React" alt="React" />
       <img src="https://skillicons.dev/icons?i=js" width="44" title="JavaScript" alt="JavaScript" />
@@ -40,17 +50,16 @@
     </td>
   </tr>
   <tr>
-    <td align="center"><b>Backend</b></td>
-    <td>
+    <td align="center" width="50%">
+      <sub>BACKEND</sub><br /><br />
       <img src="https://skillicons.dev/icons?i=nodejs" width="44" title="Node.js" alt="Node.js" />
       <img src="https://skillicons.dev/icons?i=express" width="44" title="Express.js" alt="Express.js" />
+      <img src="./icons/hono.svg" width="44" title="Hono" alt="Hono" />
       <img src="https://skillicons.dev/icons?i=prisma" width="44" title="Prisma ORM" alt="Prisma ORM" />
       <img src="./icons/zod.svg" width="44" title="Zod" alt="Zod" />
     </td>
-  </tr>
-  <tr>
-    <td align="center"><b>Database</b></td>
-    <td>
+    <td align="center" width="50%">
+      <sub>DATABASE</sub><br /><br />
       <img src="https://skillicons.dev/icons?i=postgres" width="44" title="PostgreSQL" alt="PostgreSQL" />
       <img src="./icons/neon.svg" width="44" title="Neon DB" alt="Neon DB" />
       <img src="https://skillicons.dev/icons?i=supabase" width="44" title="Supabase" alt="Supabase" />
@@ -58,15 +67,27 @@
     </td>
   </tr>
   <tr>
-    <td align="center"><b>Tools &amp; Services</b></td>
-    <td>
+    <td align="center" width="50%">
+      <sub>AI</sub><br /><br />
+      <img src="./icons/claude.svg" width="44" title="Claude" alt="Claude" />
+      <img src="./icons/openai.svg" width="44" title="OpenAI" alt="OpenAI" />
+    </td>
+    <td align="center" width="50%">
+      <sub>CLOUD &amp; DEPLOY</sub><br /><br />
+      <img src="https://skillicons.dev/icons?i=vercel" width="44" title="Vercel" alt="Vercel" />
+      <img src="https://skillicons.dev/icons?i=cloudflare" width="44" title="Cloudflare" alt="Cloudflare" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <sub>TOOLS &amp; SERVICES</sub><br /><br />
       <img src="https://skillicons.dev/icons?i=git" width="44" title="Git" alt="Git" />
       <img src="https://skillicons.dev/icons?i=github" width="44" title="GitHub" alt="GitHub" />
       <img src="https://skillicons.dev/icons?i=vscode" width="44" title="VS Code" alt="VS Code" />
       <img src="./icons/cursor.svg" width="44" title="Cursor" alt="Cursor" />
-      <img src="./icons/betterauth.svg" width="44" title="Better Auth" alt="Better Auth" />
       <img src="https://skillicons.dev/icons?i=postman" width="44" title="Postman" alt="Postman" />
       <img src="https://skillicons.dev/icons?i=npm" width="44" title="npm" alt="npm" />
+      <img src="./icons/betterauth.svg" width="44" title="Better Auth" alt="Better Auth" />
       <img src="./icons/stripe.svg" width="44" title="Stripe" alt="Stripe" />
       <img src="./icons/resend.svg" width="44" title="Resend" alt="Resend" />
     </td>

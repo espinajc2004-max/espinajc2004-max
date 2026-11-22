@@ -16,7 +16,5 @@
 
 ### Activity
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/pond-dark.svg" />
-  <img width="100%" alt="An animated koi pond: one koi for every 10 of my GitHub contributions in the past year" src="./assets/pond-light.svg" />
-</picture>
+<!-- The koi is drawn nightly from my GitHub activity by .github/workflows/koi.yml (git-koi) -->
+<p align="center"><img src="koi/koi.gif" width="512" alt="My koi, redrawn every night from my GitHub activity" /></p>

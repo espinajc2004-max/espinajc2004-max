@@ -22,16 +22,13 @@ jobs:
       - uses: actions/checkout@v7
       - uses: yalongwastaken/git-koi@v1
         with: { body: white, output-dir: koi/white }
-      - uses: yalongwastaken/git-koi@v1
-        with: { body: black, output-dir: koi/black }
-      - uses: yalongwastaken/git-koi@v1
-        with: { body: asagi, output-dir: koi/asagi }
-      - uses: yalongwastaken/git-koi@v1
-        with: { body: tea, output-dir: koi/tea }
-      - uses: yalongwastaken/git-koi@v1
-        with: { body: gold, output-dir: koi/gold }
-      - uses: yalongwastaken/git-koi@v1
-        with: { body: platinum, output-dir: koi/platinum }
+      # The Action above installed git-koi and saved today's snapshot; render the other five bodies from it.
+      - name: Render the other bodies
+        shell: bash
+        run: |
+          for body in black asagi tea gold platinum; do
+            git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir "koi/$body" --body "$body"
+          done
       - uses: actions/setup-python@v6
         with: { python-version: "3.13" }
       - name: Build the pond

@@ -76,7 +76,7 @@ def readable(brand, bg):
 def mono(hex_):
     """Black, white and grey brands follow the theme's text colour instead of turning grey."""
     r, g, b = (int(hex_[i:i + 2], 16) for i in (1, 3, 5))
-    return max(r, g, b) - min(r, g, b) < 24
+    return max(r, g, b) - min(r, g, b) < 40  # 40 also catches near-grey slates like Prisma
 
 assert contrast("#000000", "#ffffff") > 20 and contrast(readable("#F7DF1E", "#e4efec"), "#e4efec") >= 3
 assert contrast(readable("#000000", "#0b2a45"), "#0b2a45") >= 3

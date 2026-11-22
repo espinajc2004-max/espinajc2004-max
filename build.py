@@ -179,24 +179,30 @@ def git_koi(body):
     return "data:image/gif;base64," + base64.b64encode(path.read_bytes()).decode(), box
 
 
+def lap(cx, cy, half, radius, clockwise):
+    """A stadium loop (two straights joined by half circles): wide, even turns instead of spinning on the spot."""
+    if clockwise:
+        return (f"M{cx - half} {cy - radius}H{cx + half}A{radius} {radius} 0 0 1 {cx + half} {cy + radius}"
+                f"H{cx - half}A{radius} {radius} 0 0 1 {cx - half} {cy - radius}Z")
+    return (f"M{cx + half} {cy - radius}H{cx - half}A{radius} {radius} 0 0 0 {cx - half} {cy + radius}"
+            f"H{cx + half}A{radius} {radius} 0 0 0 {cx + half} {cy - radius}Z")
+
+
 def pond(t, mode, total, fish):
-    W, H, ROWS, PAD = 900, 360, 3, 6
+    W, H, GAP = 900, 360, 78
+    # As big as possible (up to .45) while two turning koi still fit in the 78 px between the loops.
+    SCALE = min(.45, (GAP / 2 - 1) / max(math.hypot(x1 - x0, y1 - y0) / 2 for _, (x0, y0, x1, y1) in fish))
     p, rnd = POND[mode], random.Random(7)  # fixed seed: same pond every build
     n = koi_count(total)
-    cols = math.ceil(n / ROWS)
-    cw, ch = W / cols, H / ROWS
     b = [f'<defs><clipPath id="card"><rect width="{W}" height="{H}" rx="18"/></clipPath>'
          f'<radialGradient id="depth" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="{p["water"]}"/>'
          f'<stop offset="1" stop-color="{p["deep"]}"/></radialGradient>']
     sprites = []
     for k, (uri, (x0, y0, x1, y1)) in enumerate(fish):
-        # Biggest scale whose spinning fish (a disc of radius r) still leaves room to swim inside a cell.
-        r_gif = math.hypot(x1 - x0, y1 - y0) / 2
-        s = min(.45, (ch / 2 - PAD - 8) / r_gif)
-        w, h = (x1 - x0) * s, (y1 - y0) * s
+        w, h = (x1 - x0) * SCALE, (y1 - y0) * SCALE
         b.append(f'<svg id="k{k}" viewBox="{x0} {y0} {x1 - x0} {y1 - y0}" width="{w:.1f}" height="{h:.1f}">'
                  f'<image href="{uri}" width="512" height="512" style="image-rendering:pixelated"/></svg>')
-        sprites.append((w, h, r_gif * s))
+        sprites.append((w, h, math.hypot(w, h) / 2))  # radius of the disc a turning fish sweeps
     for i in range(n):  # every koi gets its own spot on the colour wheel, starting at koi red/orange, so no two look alike
         b.append(f'<filter id="hue{i}"><feColorMatrix type="hueRotate" values="{(160 + i * 360 / n) % 360:.0f}"/></filter>')
     b.append(f'</defs><g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="url(#depth)"/>')
@@ -205,20 +211,28 @@ def pond(t, mode, total, fish):
         b.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="2" fill="none" stroke="{p["ripple"]}" stroke-width="1.2">'
                  f'<animate attributeName="r" values="2;34" dur="5s" begin="{i * .9:.1f}s" repeatCount="indefinite"/>'
                  f'<animate attributeName="opacity" values=".5;0" dur="5s" begin="{i * .9:.1f}s" repeatCount="indefinite"/></circle>')
-    for i in range(n):
-        k = i % len(fish)
-        w, h, r = sprites[k]
-        row, col = divmod(i, cols)
-        cx, cy = (col + .5) * cw, (row + .5) * ch
-        # Each koi loops inside its own cell, so two koi can never touch.
-        rx, ry = max(4, cw / 2 - r - PAD), max(4, ch / 2 - r - PAD)
-        sweep = (row + col) % 2
-        loop = f"M{cx + rx:.0f} {cy:.0f}A{rx:.0f} {ry:.0f} 0 1 {sweep} {cx - rx:.0f} {cy:.0f}A{rx:.0f} {ry:.0f} 0 1 {sweep} {cx + rx:.0f} {cy:.0f}"
-        perimeter = math.pi * (3 * (rx + ry) - math.sqrt((3 * rx + ry) * (rx + 3 * ry)))
-        dur = perimeter / rnd.uniform(16, 26)  # px per second
-        b.append(f'<g><animateMotion path="{loop}" dur="{dur:.1f}s" begin="-{rnd.uniform(0, dur):.1f}s" '
-                 f'repeatCount="indefinite" rotate="auto"/>'
-                 f'<use href="#k{k}" x="{-w / 2:.1f}" y="{-h / 2:.1f}" filter="url(#hue{i})"/></g>')
+    # Two loops around the same centre, same straights, radii 78 px apart: the gap is 78 px all the way round.
+    # Koi on one loop share a speed and are spaced evenly, so they never catch up; the loops never come within
+    # two fish-widths of each other, so koi on different loops never meet either.
+    cx, cy, half = W // 2, H // 2, 270
+    lanes = [(128, True, 28), (128 - GAP, False, 22)]  # (turn radius, clockwise, px per second)
+    r_max = max(r for *_, r in sprites)
+    assert lanes[0][0] - lanes[1][0] >= 2 * r_max, "koi on the two loops could touch"
+    outer = math.ceil(n * .6)
+    for lane, ((radius, clockwise, speed), count) in enumerate(zip(lanes, (outer, n - outer))):
+        length = 4 * half + 2 * math.pi * radius
+        assert length / max(count, 1) >= 2 * r_max, "koi on one loop could touch"
+        dur = length / speed
+        for j in range(count):
+            i = j if lane == 0 else outer + j
+            k = i % len(fish)
+            w, h, _ = sprites[k]
+            sway = rnd.uniform(1.4, 2.0)
+            b.append(f'<g><animateMotion path="{lap(cx, cy, half, radius, clockwise)}" dur="{dur:.1f}s" '
+                     f'begin="-{dur * j / count:.2f}s" repeatCount="indefinite" rotate="auto"/>'
+                     f'<g><animateTransform attributeName="transform" type="rotate" values="-6;6;-6" keyTimes="0;.5;1" '
+                     f'calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" dur="{sway:.2f}s" repeatCount="indefinite"/>'
+                     f'<use href="#k{k}" x="{-w / 2:.1f}" y="{-h / 2:.1f}" filter="url(#hue{i})"/></g></g>')
     for cx, cy, r, rot in ((60, 40, 26, 20), (850, 322, 32, 200), (842, 34, 18, 110), (52, 328, 20, 300)):  # lily pads in the corners
         a1, a2 = math.radians(rot), math.radians(rot + 330)
         b.append(f'<path d="M{cx} {cy}L{cx + r * math.cos(a1):.1f} {cy + r * math.sin(a1):.1f}'

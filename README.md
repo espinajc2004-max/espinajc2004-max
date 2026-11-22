@@ -16,7 +16,5 @@
 
 ### Activity
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/contrib-dark.svg" />
-  <img width="100%" alt="GitHub contributions in the last year, drawn as 3D cubes" src="./assets/contrib-light.svg" />
-</picture>
+<!-- The koi is drawn nightly from my GitHub activity by .github/workflows/koi.yml (git-koi) -->
+<img src="koi/koi.gif" width="100%" alt="A pixel-art koi drawn from my GitHub activity" />

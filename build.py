@@ -3,7 +3,7 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import datetime, json, math, pathlib, re, subprocess, urllib.request
+import json, math, pathlib, re, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
@@ -144,86 +144,7 @@ def stack(t):
     return svg(W, H, "".join(b), "Tech stack: " + ", ".join(n for n, _ in items), css)
 
 
-USER = "espinajc2004-max"
-QUERY = ("query($login:String!){user(login:$login){contributionsCollection{contributionCalendar"
-         "{totalContributions weeks{contributionDays{date weekday contributionCount contributionLevel}}}}}}")
-
-# Sequential ramp, one hue (teal), per theme: empty step + GitHub's four quartile levels.
-# Dark mode is its own set of steps (dim -> bright), not an inverted copy of light.
-RAMP = {
-    "light": ["#cfe0dc", "#a6d6cf", "#62b3aa", "#2a8c8c", "#18615f"],
-    "dark": ["#123a59", "#1d5a68", "#2f8689", "#4fb3b0", "#9fe1d6"],
-}
-LEVEL = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
-
-
-def calendar():
-    """Last year's contributions via the gh CLI (uses your gh login, or GH_TOKEN in CI)."""
-    out = subprocess.run(["gh", "api", "graphql", "-f", f"query={QUERY}", "-F", f"login={USER}"],
-                         capture_output=True, text=True, check=True).stdout
-    return json.loads(out)["data"]["user"]["contributionsCollection"]["contributionCalendar"]
-
-
-def summary(cal):
-    days = [d for wk in cal["weeks"] for d in wk["contributionDays"]]
-    streak = best = 0
-    for d in days:
-        streak = streak + 1 if d["contributionCount"] else 0
-        best = max(best, streak)
-    top = max(days, key=lambda d: d["contributionCount"])
-    when = datetime.date.fromisoformat(top["date"])
-    return [("Contributions", f'{cal["totalContributions"]:,}'),
-            ("Active days", str(sum(1 for d in days if d["contributionCount"]))),
-            ("Longest streak", f'{best} day{"s" * (best != 1)}'),
-            ("Busiest day", f'{top["contributionCount"]} on {when:%b} {when.day}')]
-
-
-assert summary({"totalContributions": 3, "weeks": [{"contributionDays": [
-    {"date": "2026-01-01", "contributionCount": 1}, {"date": "2026-01-02", "contributionCount": 2},
-    {"date": "2026-01-03", "contributionCount": 0}]}]})[2:] == [("Longest streak", "2 days"), ("Busiest day", "2 on Jan 2")]
-
-
-def contrib(t, cal, mode):
-    ramp, PAD, CELL, GAP = RAMP[mode], 32, 12, 3
-    STEP = CELL + GAP
-    b = []
-    # KPI row: four stat tiles, label above value.
-    for i, (label, value) in enumerate(summary(cal)):
-        x = PAD + i * 210
-        if i:
-            b.append(f'<line x1="{x - 24}" x2="{x - 24}" y1="30" y2="74" stroke="{t["border"]}"/>')
-        b.append(f'<text x="{x}" y="42" font-family="{FONT}" font-size="12.5" fill="{t["muted"]}">{label}</text>')
-        b.append(f'<text x="{x}" y="70" font-family="{FONT}" font-size="24" font-weight="600" fill="{t["fg"]}">{escape(value)}</text>')
-    # Heatmap: weeks across, weekdays down.
-    gx, gy = PAD + 30, 124
-    last_month = None
-    for w, wk in enumerate(cal["weeks"]):
-        first = datetime.date.fromisoformat(wk["contributionDays"][0]["date"])
-        if first.month != last_month and w < len(cal["weeks"]) - 2:
-            if last_month is not None or first.day <= 7:
-                b.append(f'<text x="{gx + w * STEP}" y="{gy - 10}" font-family="{FONT}" font-size="11" fill="{t["muted"]}">{first:%b}</text>')
-            last_month = first.month
-        for d in wk["contributionDays"]:
-            b.append(f'<rect x="{gx + w * STEP}" y="{gy + d["weekday"] * STEP}" width="{CELL}" height="{CELL}" rx="2.5" '
-                     f'fill="{ramp[LEVEL[d["contributionLevel"]]]}"/>')
-    for d, name in ((1, "Mon"), (3, "Wed"), (5, "Fri")):
-        b.append(f'<text x="{PAD}" y="{gy + d * STEP + 10}" font-family="{FONT}" font-size="11" fill="{t["muted"]}">{name}</text>')
-    # Legend, right-aligned under the grid.
-    ly, right = gy + 7 * STEP + 14, gx + len(cal["weeks"]) * STEP - GAP
-    lx = right - 5 * STEP - 30
-    b.append(f'<text x="{lx - 8}" y="{ly + 10}" text-anchor="end" font-family="{FONT}" font-size="11" fill="{t["muted"]}">Less</text>')
-    for i, c in enumerate(ramp):
-        b.append(f'<rect x="{lx + i * STEP}" y="{ly}" width="{CELL}" height="{CELL}" rx="2.5" fill="{c}"/>')
-    b.append(f'<text x="{right}" y="{ly + 10}" text-anchor="end" font-family="{FONT}" font-size="11" fill="{t["muted"]}">More</text>')
-    W, H = 900, ly + CELL + PAD
-    body = f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>' + "".join(b)
-    stats = ". ".join(f"{k}: {v}" for k, v in summary(cal))
-    return svg(W, H, body, f"GitHub contributions in the last year. {stats}.")
-
-
-cal = calendar()
 for mode, t in THEMES.items():
     (OUT / f"hero-{mode}.svg").write_text(hero(t), encoding="utf-8")
     (OUT / f"stack-{mode}.svg").write_text(stack(t), encoding="utf-8")
-    (OUT / f"contrib-{mode}.svg").write_text(contrib(t, cal, mode), encoding="utf-8")
     print("built", mode)

@@ -102,19 +102,25 @@
 
 <br />
 
-<h3 align="center">GitHub Stats</h3>
+<h3 align="center">GitHub Activity</h3>
 
+<!-- Each card has a dark + light version on the page background so it blends in instead of sitting in a box -->
 <p align="center">
-  <img height="165" src="https://github-readme-stats.vercel.app/api?username=espinajc2004-max&show_icons=true&theme=tokyonight&hide_border=true&count_private=true" alt="GitHub stats" />
-  <img height="165" src="https://github-readme-stats.vercel.app/api/top-langs/?username=espinajc2004-max&layout=compact&theme=tokyonight&hide_border=true" alt="Top languages" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-activity-graph.vercel.app/graph?username=espinajc2004-max&custom_title=Contributions%20this%20month&bg_color=0d1117&color=8b949e&title_color=a78bfa&line=7c3aed&point=c4b5fd&area=true&area_color=7c3aed&hide_border=true&radius=8" />
+    <img width="100%" alt="Contribution graph" src="https://github-readme-activity-graph.vercel.app/graph?username=espinajc2004-max&custom_title=Contributions%20this%20month&bg_color=ffffff&color=57606a&title_color=6d28d9&line=7c3aed&point=6d28d9&area=true&area_color=c4b5fd&hide_border=true&radius=8" />
+  </picture>
 </p>
 
 <p align="center">
-  <img src="https://streak-stats.demolab.com?user=espinajc2004-max&theme=tokyonight&hide_border=true" alt="GitHub streak" />
-</p>
-
-<p align="center">
-  <img width="100%" src="https://github-readme-activity-graph.vercel.app/graph?username=espinajc2004-max&theme=tokyo-night&hide_border=true&area=true" alt="Contribution graph" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-stats.vercel.app/api?username=espinajc2004-max&custom_title=Stats&show_icons=true&count_private=true&hide_border=true&bg_color=0d1117&title_color=a78bfa&text_color=c9d1d9&icon_color=7c3aed&ring_color=7c3aed" />
+    <img height="180" alt="GitHub stats" src="https://github-readme-stats.vercel.app/api?username=espinajc2004-max&custom_title=Stats&show_icons=true&count_private=true&hide_border=true&bg_color=ffffff&title_color=6d28d9&text_color=24292f&icon_color=7c3aed&ring_color=7c3aed" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-stats.vercel.app/api/top-langs/?username=espinajc2004-max&custom_title=Top%20Languages&layout=compact&langs_count=6&hide_border=true&bg_color=0d1117&title_color=a78bfa&text_color=c9d1d9" />
+    <img height="180" alt="Top languages" src="https://github-readme-stats.vercel.app/api/top-langs/?username=espinajc2004-max&custom_title=Top%20Languages&layout=compact&langs_count=6&hide_border=true&bg_color=ffffff&title_color=6d28d9&text_color=24292f" />
+  </picture>
 </p>
 
 <img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:7c3aed,50:1e3a8a,100:0f172a&height=120&section=footer" />

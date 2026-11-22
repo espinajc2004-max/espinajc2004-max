@@ -3,7 +3,7 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import json, math, pathlib, re, subprocess, urllib.request
+import datetime, json, math, pathlib, re, subprocess, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
@@ -146,7 +146,15 @@ def stack(t):
 
 USER = "espinajc2004-max"
 QUERY = ("query($login:String!){user(login:$login){contributionsCollection{contributionCalendar"
-         "{totalContributions weeks{contributionDays{weekday contributionCount}}}}}}")
+         "{totalContributions weeks{contributionDays{date weekday contributionCount contributionLevel}}}}}}")
+
+# Sequential ramp, one hue (teal), per theme: empty step + GitHub's four quartile levels.
+# Dark mode is its own set of steps (dim -> bright), not an inverted copy of light.
+RAMP = {
+    "light": ["#cfe0dc", "#a6d6cf", "#62b3aa", "#2a8c8c", "#18615f"],
+    "dark": ["#123a59", "#1d5a68", "#2f8689", "#4fb3b0", "#9fe1d6"],
+}
+LEVEL = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
 
 def calendar():
@@ -156,49 +164,66 @@ def calendar():
     return json.loads(out)["data"]["user"]["contributionsCollection"]["contributionCalendar"]
 
 
-def mix(a, b, f):
-    """Blend hex a toward hex b by f (0..1)."""
-    pa, pb = ([int(h[i:i + 2], 16) for i in (1, 3, 5)] for h in (a, b))
-    return "#" + "".join(f"{round(x + (y - x) * f):02x}" for x, y in zip(pa, pb))
+def summary(cal):
+    days = [d for wk in cal["weeks"] for d in wk["contributionDays"]]
+    streak = best = 0
+    for d in days:
+        streak = streak + 1 if d["contributionCount"] else 0
+        best = max(best, streak)
+    top = max(days, key=lambda d: d["contributionCount"])
+    when = datetime.date.fromisoformat(top["date"])
+    return [("Contributions", f'{cal["totalContributions"]:,}'),
+            ("Active days", str(sum(1 for d in days if d["contributionCount"]))),
+            ("Longest streak", f'{best} day{"s" * (best != 1)}'),
+            ("Busiest day", f'{top["contributionCount"]} on {when:%b} {when.day}')]
 
 
-def contrib(t, cal):
-    # Oblique cube grid: weeks run right (U), weekdays run down-left (V); taller, brighter cubes = busier days.
-    U, V, GAP, MAXH, PAD, TOP = (13.6, 1.2), (-4.2, 8.0), .84, 80, 30, 50
-    days = [(w, d["weekday"], d["contributionCount"]) for w, wk in enumerate(cal["weeks"]) for d in wk["contributionDays"]]
-    peak = max(c for *_, c in days) or 1
-    shade = "#000000" if _lum(t["bg"]) > .5 else "#00101f"
+assert summary({"totalContributions": 3, "weeks": [{"contributionDays": [
+    {"date": "2026-01-01", "contributionCount": 1}, {"date": "2026-01-02", "contributionCount": 2},
+    {"date": "2026-01-03", "contributionCount": 0}]}]})[2:] == [("Longest streak", "2 days"), ("Busiest day", "2 on Jan 2")]
 
-    def pt(w, d, dx=0., dy=0.):
-        return (w + dx) * U[0] + (d + dy) * V[0], (w + dx) * U[1] + (d + dy) * V[1]
 
-    xs = [pt(w, d, a, b)[0] for w, d, _ in days for a in (0, 1) for b in (0, 1)]
-    ox = PAD - min(xs) + (900 - 2 * PAD - (max(xs) - min(xs))) / 2  # centre the slab
-    oy = TOP + MAXH
-    H = int(oy + max(pt(w, d, 1, 1)[1] for w, d, _ in days)) + PAD
-    b = [f'<defs><clipPath id="card"><rect width="900" height="{H}" rx="18"/></clipPath></defs>',
-         f'<g clip-path="url(#card)"><rect width="900" height="{H}" fill="{t["bg"]}"/>',
-         f'<text x="{PAD}" y="42" font-family="{FONT}" font-size="15" font-weight="600" fill="{t["fg"]}">'
-         f'{cal["totalContributions"]} contributions in the last year</text>']
-    for w, d, c in sorted(days, key=lambda x: (x[0] + x[1], x[1])):  # back to front
-        f = math.log1p(c) / math.log1p(peak)  # log scale so a 1-commit day still shows next to a 30
-        h = 3 + MAXH * f if c else 2
-        top = mix(t["border"], t["accent"], .35 + .65 * f) if c else t["border"]
-        g0, g1 = (1 - GAP) / 2, (1 + GAP) / 2
-        corners = [pt(w, d, g0, g0), pt(w, d, g1, g0), pt(w, d, g1, g1), pt(w, d, g0, g1)]
-        P = [(ox + x, oy + y - h) for x, y in corners]   # top face
-        B = [(ox + x, oy + y) for x, y in corners]       # ground
-        poly = lambda pts, col: b.append(f'<polygon points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in pts)}" fill="{col}"/>')
-        poly([P[3], P[2], B[2], B[3]], mix(top, shade, .25))  # front face
-        poly([P[1], P[2], B[2], B[1]], mix(top, shade, .45))  # right face
-        poly(P, top)
-    b.append("</g>")
-    return svg(900, H, "".join(b), f'{cal["totalContributions"]} GitHub contributions in the last year, drawn as 3D cubes')
+def contrib(t, cal, mode):
+    ramp, PAD, CELL, GAP = RAMP[mode], 32, 12, 3
+    STEP = CELL + GAP
+    b = []
+    # KPI row: four stat tiles, label above value.
+    for i, (label, value) in enumerate(summary(cal)):
+        x = PAD + i * 210
+        if i:
+            b.append(f'<line x1="{x - 24}" x2="{x - 24}" y1="30" y2="74" stroke="{t["border"]}"/>')
+        b.append(f'<text x="{x}" y="42" font-family="{FONT}" font-size="12.5" fill="{t["muted"]}">{label}</text>')
+        b.append(f'<text x="{x}" y="70" font-family="{FONT}" font-size="24" font-weight="600" fill="{t["fg"]}">{escape(value)}</text>')
+    # Heatmap: weeks across, weekdays down.
+    gx, gy = PAD + 30, 124
+    last_month = None
+    for w, wk in enumerate(cal["weeks"]):
+        first = datetime.date.fromisoformat(wk["contributionDays"][0]["date"])
+        if first.month != last_month and w < len(cal["weeks"]) - 2:
+            if last_month is not None or first.day <= 7:
+                b.append(f'<text x="{gx + w * STEP}" y="{gy - 10}" font-family="{FONT}" font-size="11" fill="{t["muted"]}">{first:%b}</text>')
+            last_month = first.month
+        for d in wk["contributionDays"]:
+            b.append(f'<rect x="{gx + w * STEP}" y="{gy + d["weekday"] * STEP}" width="{CELL}" height="{CELL}" rx="2.5" '
+                     f'fill="{ramp[LEVEL[d["contributionLevel"]]]}"/>')
+    for d, name in ((1, "Mon"), (3, "Wed"), (5, "Fri")):
+        b.append(f'<text x="{PAD}" y="{gy + d * STEP + 10}" font-family="{FONT}" font-size="11" fill="{t["muted"]}">{name}</text>')
+    # Legend, right-aligned under the grid.
+    ly, right = gy + 7 * STEP + 14, gx + len(cal["weeks"]) * STEP - GAP
+    lx = right - 5 * STEP - 30
+    b.append(f'<text x="{lx - 8}" y="{ly + 10}" text-anchor="end" font-family="{FONT}" font-size="11" fill="{t["muted"]}">Less</text>')
+    for i, c in enumerate(ramp):
+        b.append(f'<rect x="{lx + i * STEP}" y="{ly}" width="{CELL}" height="{CELL}" rx="2.5" fill="{c}"/>')
+    b.append(f'<text x="{right}" y="{ly + 10}" text-anchor="end" font-family="{FONT}" font-size="11" fill="{t["muted"]}">More</text>')
+    W, H = 900, ly + CELL + PAD
+    body = f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>' + "".join(b)
+    stats = ". ".join(f"{k}: {v}" for k, v in summary(cal))
+    return svg(W, H, body, f"GitHub contributions in the last year. {stats}.")
 
 
 cal = calendar()
 for mode, t in THEMES.items():
     (OUT / f"hero-{mode}.svg").write_text(hero(t), encoding="utf-8")
     (OUT / f"stack-{mode}.svg").write_text(stack(t), encoding="utf-8")
-    (OUT / f"contrib-{mode}.svg").write_text(contrib(t, cal), encoding="utf-8")
+    (OUT / f"contrib-{mode}.svg").write_text(contrib(t, cal, mode), encoding="utf-8")
     print("built", mode)

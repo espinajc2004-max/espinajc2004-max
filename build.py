@@ -197,8 +197,8 @@ def pond(t, mode, total, fish):
         b.append(f'<svg id="k{k}" viewBox="{x0} {y0} {x1 - x0} {y1 - y0}" width="{w:.1f}" height="{h:.1f}">'
                  f'<image href="{uri}" width="512" height="512" style="image-rendering:pixelated"/></svg>')
         sprites.append((w, h, r_gif * s))
-    for i in range(n):  # extra koi reuse a body with its colours turned, so no two look alike
-        b.append(f'<filter id="hue{i}"><feColorMatrix type="hueRotate" values="{(i // len(fish)) * 75}"/></filter>')
+    for i in range(n):  # every koi gets its own spot on the colour wheel, starting at koi red/orange, so no two look alike
+        b.append(f'<filter id="hue{i}"><feColorMatrix type="hueRotate" values="{(160 + i * 360 / n) % 360:.0f}"/></filter>')
     b.append(f'</defs><g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="url(#depth)"/>')
     for i in range(6):  # ripples
         x, y = rnd.uniform(60, W - 60), rnd.uniform(40, H - 40)

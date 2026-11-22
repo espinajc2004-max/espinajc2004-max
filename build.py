@@ -3,7 +3,7 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import json, math, pathlib, re, urllib.request
+import json, math, pathlib, re, subprocess, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
@@ -144,7 +144,61 @@ def stack(t):
     return svg(W, H, "".join(b), "Tech stack: " + ", ".join(n for n, _ in items), css)
 
 
+USER = "espinajc2004-max"
+QUERY = ("query($login:String!){user(login:$login){contributionsCollection{contributionCalendar"
+         "{totalContributions weeks{contributionDays{weekday contributionCount}}}}}}")
+
+
+def calendar():
+    """Last year's contributions via the gh CLI (uses your gh login, or GH_TOKEN in CI)."""
+    out = subprocess.run(["gh", "api", "graphql", "-f", f"query={QUERY}", "-F", f"login={USER}"],
+                         capture_output=True, text=True, check=True).stdout
+    return json.loads(out)["data"]["user"]["contributionsCollection"]["contributionCalendar"]
+
+
+def mix(a, b, f):
+    """Blend hex a toward hex b by f (0..1)."""
+    pa, pb = ([int(h[i:i + 2], 16) for i in (1, 3, 5)] for h in (a, b))
+    return "#" + "".join(f"{round(x + (y - x) * f):02x}" for x, y in zip(pa, pb))
+
+
+def contrib(t, cal):
+    # Oblique cube grid: weeks run right (U), weekdays run down-left (V); taller, brighter cubes = busier days.
+    U, V, GAP, MAXH, PAD, TOP = (13.6, 1.2), (-4.2, 8.0), .84, 80, 30, 50
+    days = [(w, d["weekday"], d["contributionCount"]) for w, wk in enumerate(cal["weeks"]) for d in wk["contributionDays"]]
+    peak = max(c for *_, c in days) or 1
+    shade = "#000000" if _lum(t["bg"]) > .5 else "#00101f"
+
+    def pt(w, d, dx=0., dy=0.):
+        return (w + dx) * U[0] + (d + dy) * V[0], (w + dx) * U[1] + (d + dy) * V[1]
+
+    xs = [pt(w, d, a, b)[0] for w, d, _ in days for a in (0, 1) for b in (0, 1)]
+    ox = PAD - min(xs) + (900 - 2 * PAD - (max(xs) - min(xs))) / 2  # centre the slab
+    oy = TOP + MAXH
+    H = int(oy + max(pt(w, d, 1, 1)[1] for w, d, _ in days)) + PAD
+    b = [f'<defs><clipPath id="card"><rect width="900" height="{H}" rx="18"/></clipPath></defs>',
+         f'<g clip-path="url(#card)"><rect width="900" height="{H}" fill="{t["bg"]}"/>',
+         f'<text x="{PAD}" y="42" font-family="{FONT}" font-size="15" font-weight="600" fill="{t["fg"]}">'
+         f'{cal["totalContributions"]} contributions in the last year</text>']
+    for w, d, c in sorted(days, key=lambda x: (x[0] + x[1], x[1])):  # back to front
+        f = math.log1p(c) / math.log1p(peak)  # log scale so a 1-commit day still shows next to a 30
+        h = 3 + MAXH * f if c else 2
+        top = mix(t["border"], t["accent"], .35 + .65 * f) if c else t["border"]
+        g0, g1 = (1 - GAP) / 2, (1 + GAP) / 2
+        corners = [pt(w, d, g0, g0), pt(w, d, g1, g0), pt(w, d, g1, g1), pt(w, d, g0, g1)]
+        P = [(ox + x, oy + y - h) for x, y in corners]   # top face
+        B = [(ox + x, oy + y) for x, y in corners]       # ground
+        poly = lambda pts, col: b.append(f'<polygon points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in pts)}" fill="{col}"/>')
+        poly([P[3], P[2], B[2], B[3]], mix(top, shade, .25))  # front face
+        poly([P[1], P[2], B[2], B[1]], mix(top, shade, .45))  # right face
+        poly(P, top)
+    b.append("</g>")
+    return svg(900, H, "".join(b), f'{cal["totalContributions"]} GitHub contributions in the last year, drawn as 3D cubes')
+
+
+cal = calendar()
 for mode, t in THEMES.items():
     (OUT / f"hero-{mode}.svg").write_text(hero(t), encoding="utf-8")
     (OUT / f"stack-{mode}.svg").write_text(stack(t), encoding="utf-8")
+    (OUT / f"contrib-{mode}.svg").write_text(contrib(t, cal), encoding="utf-8")
     print("built", mode)

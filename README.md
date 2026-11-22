@@ -13,3 +13,10 @@
   <source media="(prefers-color-scheme: dark)" srcset="./assets/stack-dark.svg" />
   <img width="100%" alt="Languages: JavaScript, TypeScript, HTML, CSS. Frontend: Next.js, React, Tailwind CSS, shadcn/ui, styled-components. Backend: Node.js, Express, Hono, Prisma, Drizzle ORM, Zod. Database: PostgreSQL, Neon, Supabase, MongoDB. AI: OpenAI. Cloud: Vercel, Cloudflare. Tools: Git, GitHub, VS Code, Cursor, Postman, npm. Services: Better Auth, Resend." src="./assets/stack-light.svg" />
 </picture>
+
+### Activity
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/contrib-dark.svg" />
+  <img width="100%" alt="GitHub contributions in the last year, drawn as 3D cubes" src="./assets/contrib-light.svg" />
+</picture>

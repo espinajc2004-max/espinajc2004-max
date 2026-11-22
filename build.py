@@ -3,18 +3,17 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import math, pathlib, re, urllib.request
+import json, math, pathlib, re, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
 OUT.mkdir(exist_ok=True)
 
-# Same values as the portfolio: Lagoon (light) and Deep sea (dark) themes, plus its six-hue palette.
+# Same values as the portfolio: Lagoon (light) and Deep sea (dark) themes.
 THEMES = {
     "light": dict(bg="#e4efec", fg="#173f57", muted="#2e5a70", border="#b7d0cb", accent="#2a8c8c"),
     "dark": dict(bg="#0b2a45", fg="#dceae6", muted="#9dbcc8", border="#24506f", accent="#4fb3b0"),
 }
-PALETTE = ["#F05032", "#61DAFB", "#3FCF8E", "#F7DF1E", "#A78BFA", "#5FA04E"]
 FONT = "Archivo, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
 
 STACK = [
@@ -33,12 +32,54 @@ STACK = [
 SHARE_ROW = {"Cloud"}  # sits beside AI instead of taking its own short row
 
 _cache = {}
+SI = "https://cdn.jsdelivr.net/npm/simple-icons@latest"
+def fetch(url):
+    return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "profile-build"})).read().decode()
+
+def _slug(title):  # simple-icons derives most slugs from the title
+    for a, b in (("+", "plus"), (".", "dot"), ("&", "and")):
+        title = title.replace(a, b)
+    return re.sub("[^a-z0-9]", "", title.lower())
+
+HEX = {i.get("slug") or _slug(i["title"]): "#" + i["hex"] for i in json.loads(fetch(f"{SI}/data/simple-icons.json"))}
+
 def logo(slug):
+    """(path, brand hex) for a simple-icons slug."""
     if slug not in _cache:
-        req = urllib.request.Request(f"https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/{slug}.svg",
-                                     headers={"User-Agent": "profile-build"})
-        _cache[slug] = re.search(r'<path d="([^"]+)"', urllib.request.urlopen(req).read().decode()).group(1)
+        _cache[slug] = (re.search(r'<path d="([^"]+)"', fetch(f"{SI}/icons/{slug}.svg")).group(1), HEX.get(slug, "#000000"))  # OpenAI has no colour entry; its logo is black
     return _cache[slug]
+
+
+def _lum(hex_):
+    c = [int(hex_[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    c = [v / 12.92 if v <= .03928 else ((v + .055) / 1.055) ** 2.4 for v in c]
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]
+
+
+def contrast(a, b):
+    hi, lo = sorted((_lum(a), _lum(b)), reverse=True)
+    return (hi + .05) / (lo + .05)
+
+
+def readable(brand, bg):
+    """Brand colour, nudged toward black (light bg) or white (dark bg) until it reaches 3:1 against bg."""
+    target = 0 if _lum(bg) > .5 else 255
+    rgb = [int(brand[i:i + 2], 16) for i in (1, 3, 5)]
+    for step in range(21):
+        mixed = "#" + "".join(f"{round(v + (target - v) * step / 20):02x}" for v in rgb)
+        if contrast(mixed, bg) >= 3:
+            return mixed
+    return mixed
+
+
+
+def mono(hex_):
+    """Black, white and grey brands follow the theme's text colour instead of turning grey."""
+    r, g, b = (int(hex_[i:i + 2], 16) for i in (1, 3, 5))
+    return max(r, g, b) - min(r, g, b) < 24
+
+assert contrast("#000000", "#ffffff") > 20 and contrast(readable("#F7DF1E", "#e4efec"), "#e4efec") >= 3
+assert contrast(readable("#000000", "#0b2a45"), "#0b2a45") >= 3
 
 
 def svg(w, h, body, title):
@@ -47,23 +88,21 @@ def svg(w, h, body, title):
 
 
 def hero(t):
-    W, H = 900, 300
+    W, H = 900, 240
     b = [f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>']
     # Depth contours on the right: a nod to the Lagoon / Deep sea theme names.
     for k in range(11):
-        y0, amp = 70 + k * 19, 10 + k * 1.4
+        y0, amp = 36 + k * 18, 10 + k * 1.4
         pts = " ".join(f"{x},{y0 + amp * math.sin(x / (38 + k * 3) + k * .7):.1f}" for x in range(560, W + 1, 8))
         color, op = (t["accent"], .9) if k == 6 else (t["border"], .35 + k * .05)
         b.append(f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="{2 if k == 6 else 1.2}" opacity="{op:.2f}"/>')
     b.append(f'<rect x="540" width="120" height="{H}" fill="url(#fade)"/>')
     b.insert(0, f'<defs><linearGradient id="fade"><stop offset="0" stop-color="{t["bg"]}"/>'
                 f'<stop offset="1" stop-color="{t["bg"]}" stop-opacity="0"/></linearGradient></defs>')
-    b.append(f'<text x="48" y="112" font-family="{FONT}" font-size="46" font-weight="700" fill="{t["fg"]}" letter-spacing="-1">John Carlo Espina</text>')
-    b.append(f'<text x="48" y="152" font-family="{FONT}" font-size="20" fill="{t["fg"]}">Full-stack developer, from the interface down to the database.</text>')
-    b.append(f'<text x="48" y="184" font-family="{FONT}" font-size="15" fill="{t["muted"]}">Computer Science student in San Jose del Monte, Bulacan.</text>')
-    b.append(f'<text x="48" y="206" font-family="{FONT}" font-size="15" fill="{t["muted"]}">Interning now, still upskilling, and open to work.</text>')
-    for i, c in enumerate(PALETTE):
-        b.append(f'<rect x="{48 + i * 30}" y="240" width="22" height="22" rx="6" fill="{c}"/>')
+    b.append(f'<text x="48" y="92" font-family="{FONT}" font-size="46" font-weight="700" fill="{t["fg"]}" letter-spacing="-1">John Carlo Espina</text>')
+    b.append(f'<text x="48" y="132" font-family="{FONT}" font-size="20" fill="{t["fg"]}">Full-stack developer, from the interface down to the database.</text>')
+    b.append(f'<text x="48" y="166" font-family="{FONT}" font-size="15" fill="{t["muted"]}">Computer Science student in San Jose del Monte, Bulacan.</text>')
+    b.append(f'<text x="48" y="188" font-family="{FONT}" font-size="15" fill="{t["muted"]}">Interning now, still upskilling, and open to work.</text>')
     return svg(W, H, "".join(b), "John Carlo Espina, full-stack developer")
 
 
@@ -84,16 +123,15 @@ def stack(t):
         mid, x = top + ROW / 2, PAD
         for g, (group, items) in enumerate(row):
             lw = LABEL_W if g == 0 else LABEL_W - 60  # a group sharing a row needs less label room
-            dot = PALETTE[[n for n, _ in STACK].index(group) % len(PALETTE)]
-            b.append(f'<circle cx="{x + 5}" cy="{mid}" r="5" fill="{dot}"/>')
-            b.append(f'<text x="{x + 20}" y="{mid + 5}" font-family="{FONT}" font-size="15" font-weight="600" fill="{t["fg"]}">{group}</text>')
+            b.append(f'<text x="{x}" y="{mid + 5}" font-family="{FONT}" font-size="15" font-weight="600" fill="{t["fg"]}">{group}</text>')
             assert x + lw + len(items) * SLOT <= W - PAD + 10, f"{group} row too wide"
             for i, (name, slug) in enumerate(items):
                 cx, iy = x + lw + i * SLOT + SLOT / 2, mid - 24
                 if slug:
-                    b.append(f'<path transform="translate({cx - 13} {iy}) scale({26 / 24})" fill="{t["fg"]}" d="{logo(slug)}"/>')
-                else:  # code glyph
-                    b.append(f'<path transform="translate({cx - 13} {iy}) scale({26 / 24})" fill="none" stroke="{t["fg"]}" '
+                    path, brand = logo(slug)
+                    b.append(f'<path transform="translate({cx - 13} {iy}) scale({26 / 24})" fill="{t["fg"] if mono(brand) else readable(brand, t["bg"])}" d="{path}"/>')
+                else:  # code glyph in VS Code blue
+                    b.append(f'<path transform="translate({cx - 13} {iy}) scale({26 / 24})" fill="none" stroke="{readable("#007ACC", t["bg"])}" '
                              f'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M8 5 2 12l6 7M16 5l6 7-6 7"/>')
                 b.append(f'<text x="{cx}" y="{mid + 22}" text-anchor="middle" font-family="{FONT}" font-size="11.5" fill="{t["muted"]}">{escape(name)}</text>')
             x += lw + len(items) * SLOT + 50

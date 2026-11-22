@@ -5,43 +5,25 @@
   <img width="100%" alt="John Carlo Espina. Full-stack developer, from the interface down to the database. Computer Science student in San Jose del Monte, Bulacan. Interning now, still upskilling, and open to work." src="./assets/hero-light.svg" />
 </picture>
 
-[LinkedIn](https://www.linkedin.com/in/john-carlo-espina-61a2a9424/) &nbsp;·&nbsp; [Facebook](https://www.facebook.com/carlo.espina.7906)
+[Portfolio](https://www.jcportfolio.dev/) &nbsp;·&nbsp; [LinkedIn](https://www.linkedin.com/in/john-carlo-espina-61a2a9424/) &nbsp;·&nbsp; [Facebook](https://www.facebook.com/carlo.espina.7906)
 
-For our thesis we shipped a platform with machine-learning forecasts and over a thousand tests. I learn by building: when I pick up something new, I make something small with it the same week.
-
-### Tech stack
+### Stack
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./assets/stack-dark.svg" />
-  <img width="100%" alt="Tech stack. Languages: JavaScript, TypeScript, HTML, CSS. Frontend: Next.js, React, Tailwind CSS, shadcn/ui, styled-components, GSAP, Three.js. Backend: Node.js, Express, Hono, Prisma, Drizzle ORM, Zod. Database: PostgreSQL, Neon, Supabase, MongoDB. AI: Claude, OpenAI. Cloud: Vercel, Cloudflare. Tools: Git, GitHub, VS Code, Cursor, Postman, npm. Services: Better Auth, Stripe, Resend." src="./assets/stack-light.svg" />
+  <img width="100%" alt="Languages: JavaScript, TypeScript, HTML, CSS. Frontend: Next.js, React, Tailwind CSS, shadcn/ui, styled-components, GSAP, Three.js. Backend: Node.js, Express, Hono, Prisma, Drizzle ORM, Zod. Database: PostgreSQL, Neon, Supabase, MongoDB. AI: Claude, OpenAI. Cloud: Vercel, Cloudflare. Tools: Git, GitHub, VS Code, Cursor, Postman, npm. Services: Better Auth, Stripe, Resend." src="./assets/stack-light.svg" />
 </picture>
 
-### Things I've built
+### Projects
 
 **[StackPack CLI](https://github.com/espinajc2004-max/StackPack)**<br />
-A local-first terminal tool that scaffolds JavaScript and TypeScript projects with curated integrations. Published on npm.
+A terminal tool that scaffolds JavaScript and TypeScript projects and wires in the integrations you pick. Published on npm.
 
 **Pollen**<br />
 An AI study app. Upload a lecture PDF or photo and it writes quizzes, flashcards and notes, each answer linked to the page it came from.
 
 **PistachiUI**<br />
-An open-source component library with its own look, built on the shadcn registry.
+An open-source component library on the shadcn registry, with its own look.
 
-**Auggregates**, our thesis<br />
-A web and mobile operations system for an aggregates supplier, with an AI assistant and a budget-overrun forecast.
-
-### Activity
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-activity-graph.vercel.app/graph?username=espinajc2004-max&custom_title=Contributions%20this%20month&bg_color=0b2a45&color=9dbcc8&title_color=dceae6&line=4fb3b0&point=dceae6&area=true&area_color=4fb3b0&hide_border=true&radius=18" />
-  <img width="100%" alt="Contribution graph" src="https://github-readme-activity-graph.vercel.app/graph?username=espinajc2004-max&custom_title=Contributions%20this%20month&bg_color=e4efec&color=2e5a70&title_color=173f57&line=2a8c8c&point=173f57&area=true&area_color=2a8c8c&hide_border=true&radius=18" />
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-stats.vercel.app/api?username=espinajc2004-max&custom_title=GitHub&show_icons=true&count_private=true&hide_border=true&border_radius=18&bg_color=0b2a45&title_color=dceae6&text_color=9dbcc8&icon_color=4fb3b0&ring_color=4fb3b0" />
-  <img height="175" alt="GitHub stats" src="https://github-readme-stats.vercel.app/api?username=espinajc2004-max&custom_title=GitHub&show_icons=true&count_private=true&hide_border=true&border_radius=18&bg_color=e4efec&title_color=173f57&text_color=2e5a70&icon_color=2a8c8c&ring_color=2a8c8c" />
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-stats.vercel.app/api/top-langs/?username=espinajc2004-max&custom_title=Languages&layout=compact&langs_count=6&hide_border=true&border_radius=18&bg_color=0b2a45&title_color=dceae6&text_color=9dbcc8" />
-  <img height="175" alt="Most used languages" src="https://github-readme-stats.vercel.app/api/top-langs/?username=espinajc2004-max&custom_title=Languages&layout=compact&langs_count=6&hide_border=true&border_radius=18&bg_color=e4efec&title_color=173f57&text_color=2e5a70" />
-</picture>
+**Auggregates**<br />
+Our thesis. A web and mobile operations system for an aggregates supplier, with an AI assistant, machine-learning budget forecasts and over a thousand tests.

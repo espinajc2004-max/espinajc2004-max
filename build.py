@@ -3,7 +3,7 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import base64, json, math, pathlib, random, re, subprocess, urllib.request
+import json, math, pathlib, re, subprocess, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
@@ -124,9 +124,6 @@ def stack(t):
 
 
 USER = "espinajc2004-max"
-BODIES = ["white", "black", "asagi", "tea", "gold", "platinum"]  # git-koi's six bodies, one GIF each in koi/<body>/
-POND = {"light": dict(water="#ececec", deep="#d4d4d4", pad="#bdbdbd", pad2="#8f8f8f", ripple="#ffffff"),
-        "dark": dict(water="#2a2a2a", deep="#141414", pad="#3d3d3d", pad2="#5a5a5a", ripple="#9a9a9a")}
 
 
 def calendar():
@@ -195,96 +192,27 @@ def graph(t, days):
                f"Current streak {current} days, longest {longest} days, most in one day {max(counts)}.", css)
 
 
-def koi_count(total):
-    return max(3, min(14, total // 10 + 1))  # one koi per 10 contributions, kept between 3 and 14
-
-
-assert [koi_count(n) for n in (0, 83, 500)] == [3, 9, 14]
-
-
-def git_koi(body):
-    """(data URI, union bbox of the fish across all frames) for a git-koi GIF, or None if not drawn yet."""
-    path = pathlib.Path(__file__).parent / "koi" / body / "koi.gif"
-    if not path.exists():
-        return None
-    from PIL import Image, ImageSequence  # only needed when the GIFs exist (the Action installs it)
-    box = None
-    for frame in ImageSequence.Iterator(Image.open(path)):
-        b = frame.convert("RGBA").getchannel("A").getbbox()
-        if b:
-            box = b if box is None else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
-    return "data:image/gif;base64," + base64.b64encode(path.read_bytes()).decode(), box
-
-
-def lap(cx, cy, half, radius, clockwise):
-    """A stadium loop (two straights joined by half circles): wide, even turns instead of spinning on the spot."""
-    if clockwise:
-        return (f"M{cx - half} {cy - radius}H{cx + half}A{radius} {radius} 0 0 1 {cx + half} {cy + radius}"
-                f"H{cx - half}A{radius} {radius} 0 0 1 {cx - half} {cy - radius}Z")
-    return (f"M{cx + half} {cy - radius}H{cx - half}A{radius} {radius} 0 0 0 {cx - half} {cy + radius}"
-            f"H{cx + half}A{radius} {radius} 0 0 0 {cx + half} {cy - radius}Z")
-
-
-def pond(t, mode, total, fish):
-    W, H, GAP = 900, 360, 78
-    # As big as possible (up to .45) while two turning koi still fit in the 78 px between the loops.
-    SCALE = min(.45, (GAP / 2 - 1) / max(math.hypot(x1 - x0, y1 - y0) / 2 for _, (x0, y0, x1, y1) in fish))
-    p, rnd = POND[mode], random.Random(7)  # fixed seed: same pond every build
-    n = koi_count(total)
-    b = [f'<defs><clipPath id="card"><rect width="{W}" height="{H}" rx="18"/></clipPath>'
-         f'<radialGradient id="depth" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="{p["water"]}"/>'
-         f'<stop offset="1" stop-color="{p["deep"]}"/></radialGradient>']
-    sprites = []
-    for k, (uri, (x0, y0, x1, y1)) in enumerate(fish):
-        w, h = (x1 - x0) * SCALE, (y1 - y0) * SCALE
-        b.append(f'<svg id="k{k}" viewBox="{x0} {y0} {x1 - x0} {y1 - y0}" width="{w:.1f}" height="{h:.1f}">'
-                 f'<image href="{uri}" width="512" height="512" style="image-rendering:pixelated"/></svg>')
-        sprites.append((w, h, math.hypot(w, h) / 2))  # radius of the disc a turning fish sweeps
-    b.append('<filter id="grey"><feColorMatrix type="saturate" values="0"/></filter>')  # koi keep their patterns, lose the colour
-    b.append(f'</defs><g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="url(#depth)"/>')
-    for i in range(6):  # ripples
-        x, y = rnd.uniform(60, W - 60), rnd.uniform(40, H - 40)
-        b.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="2" fill="none" stroke="{p["ripple"]}" stroke-width="1.2">'
-                 f'<animate attributeName="r" values="2;34" dur="5s" begin="{i * .9:.1f}s" repeatCount="indefinite"/>'
-                 f'<animate attributeName="opacity" values=".5;0" dur="5s" begin="{i * .9:.1f}s" repeatCount="indefinite"/></circle>')
-    # Two loops around the same centre, same straights, radii 78 px apart: the gap is 78 px all the way round.
-    # Koi on one loop share a speed and are spaced evenly, so they never catch up; the loops never come within
-    # two fish-widths of each other, so koi on different loops never meet either.
-    cx, cy, half = W // 2, H // 2, 270
-    lanes = [(128, True, 28), (128 - GAP, False, 22)]  # (turn radius, clockwise, px per second)
-    r_max = max(r for *_, r in sprites)
-    assert lanes[0][0] - lanes[1][0] >= 2 * r_max, "koi on the two loops could touch"
-    outer = math.ceil(n * .6)
-    for lane, ((radius, clockwise, speed), count) in enumerate(zip(lanes, (outer, n - outer))):
-        length = 4 * half + 2 * math.pi * radius
-        assert length / max(count, 1) >= 2 * r_max, "koi on one loop could touch"
-        dur = length / speed
-        for j in range(count):
-            i = j if lane == 0 else outer + j
-            k = i % len(fish)
-            w, h, _ = sprites[k]
-            sway = rnd.uniform(1.4, 2.0)
-            b.append(f'<g><animateMotion path="{lap(cx, cy, half, radius, clockwise)}" dur="{dur:.1f}s" '
-                     f'begin="-{dur * j / count:.2f}s" repeatCount="indefinite" rotate="auto"/>'
-                     f'<g><animateTransform attributeName="transform" type="rotate" values="-6;6;-6" keyTimes="0;.5;1" '
-                     f'calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" dur="{sway:.2f}s" repeatCount="indefinite"/>'
-                     f'<use href="#k{k}" x="{-w / 2:.1f}" y="{-h / 2:.1f}" filter="url(#grey)"/></g></g>')
-    for cx, cy, r, rot in ((60, 40, 26, 20), (850, 322, 32, 200), (842, 34, 18, 110), (52, 328, 20, 300)):  # lily pads in the corners
-        a1, a2 = math.radians(rot), math.radians(rot + 330)
-        b.append(f'<path d="M{cx} {cy}L{cx + r * math.cos(a1):.1f} {cy + r * math.sin(a1):.1f}'
-                 f'A{r} {r} 0 1 1 {cx + r * math.cos(a2):.1f} {cy + r * math.sin(a2):.1f}Z" fill="{p["pad"]}"/>'
-                 f'<circle cx="{cx}" cy="{cy}" r="{r * .55:.1f}" fill="none" stroke="{p["pad2"]}" stroke-width="1"/>')
+def footer(t):
+    """A field of dots with a slow ripple running out from the centre, to close the page."""
+    W, H, GAP = 900, 120, 15
+    css = ".d{animation:p 3.6s ease-in-out infinite}@keyframes p{0%,100%{opacity:.12}50%{opacity:.9}}"
+    b = [f'<defs><linearGradient id="fade"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+         f'<stop offset=".2" stop-color="#fff"/><stop offset=".8" stop-color="#fff"/>'
+         f'<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
+         f'<mask id="edges"><rect width="{W}" height="{H}" fill="url(#fade)"/></mask></defs><g mask="url(#edges)">']
+    cx, cy = W / 2, H / 2
+    for y in range(GAP // 2, H, GAP):
+        for x in range(GAP // 2, W, GAP):
+            delay = -math.hypot(x - cx, (y - cy) * 2) * .012  # negative: already mid-ripple when the page opens
+            b.append(f'<circle class="d" style="animation-delay:{delay:.2f}s" cx="{x}" cy="{y}" r="1.6" fill="{t["fg"]}" opacity=".3"/>')
     b.append("</g>")
-    return svg(W, H, "".join(b), f"An animated koi pond with {n} git-koi koi, one for every 10 of {total} GitHub contributions this year")
+    return svg(W, H, "".join(b), "", css)
 
 
-fish = [f for f in map(git_koi, BODIES) if f]
 days = calendar()
-total = sum(c for _, c in days)
 for mode, t in THEMES.items():
     (OUT / f"graph-{mode}.svg").write_text(graph(t, days), encoding="utf-8")
     (OUT / f"hero-{mode}.svg").write_text(hero(t), encoding="utf-8")
     (OUT / f"stack-{mode}.svg").write_text(stack(t), encoding="utf-8")
-    if fish:  # the koi GIFs come from git-koi in the Action; skip the pond until they exist
-        (OUT / f"pond-{mode}.svg").write_text(pond(t, mode, total, fish), encoding="utf-8")
+    (OUT / f"footer-{mode}.svg").write_text(footer(t), encoding="utf-8")
     print("built", mode)

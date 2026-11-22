@@ -16,13 +16,15 @@
 
 ### Activity
 
-<!-- Rebuilt nightly by .github/workflows/koi.yml: the graph from my contribution calendar, the pond from git-koi -->
+<!-- Rebuilt nightly from my contribution calendar by .github/workflows/graph.yml -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./assets/graph-dark.svg" />
   <img width="100%" alt="Line graph of my GitHub contributions per week over the past year, with the yearly total, current streak, longest streak and most contributions in one day" src="./assets/graph-light.svg" />
 </picture>
 
+<br />
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/pond-dark.svg" />
-  <img width="100%" alt="An animated pond of git-koi koi, one for every 10 of my GitHub contributions in the past year" src="./assets/pond-light.svg" />
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/footer-dark.svg" />
+  <img width="100%" alt="" src="./assets/footer-light.svg" />
 </picture>

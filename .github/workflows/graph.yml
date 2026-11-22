@@ -1,0 +1,39 @@
+# Every night: rebuild the contribution graph from my GitHub calendar and commit it if it changed.
+name: Graph
+
+on:
+  schedule:
+    # Just after midnight UTC, so the graph includes the day that just ended.
+    - cron: "20 0 * * *"
+  workflow_dispatch:
+  push:
+    paths: [build.py, .github/workflows/graph.yml]
+
+permissions:
+  contents: write
+
+concurrency: graph
+
+jobs:
+  graph:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.13" }
+      - name: Build the images
+        run: python build.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Commit if anything changed
+        shell: bash
+        run: |
+          git add assets
+          if git diff --cached --quiet; then
+            echo "Nothing changed; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet --message "graph: update contributions"
+          git push --quiet

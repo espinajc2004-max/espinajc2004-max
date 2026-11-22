@@ -1,4 +1,5 @@
-# Draws a pixel-art koi from my GitHub activity every night (git-koi, MIT) and commits koi/koi.gif.
+# Every night: git-koi (MIT) draws my koi in all six bodies from my GitHub activity,
+# then build.py puts them in the pond (one koi per 10 contributions) and commits it.
 name: Koi
 
 on:
@@ -7,7 +8,7 @@ on:
     - cron: "20 0 * * *"
   workflow_dispatch:
   push:
-    paths: [.github/workflows/koi.yml]
+    paths: [build.py, .github/workflows/koi.yml]
 
 permissions:
   contents: write
@@ -20,18 +21,34 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: yalongwastaken/git-koi@v1
-        with:
-          body: white
-          output-dir: koi
-      - name: Commit the koi if it changed
+        with: { body: white, output-dir: koi/white }
+      - uses: yalongwastaken/git-koi@v1
+        with: { body: black, output-dir: koi/black }
+      - uses: yalongwastaken/git-koi@v1
+        with: { body: asagi, output-dir: koi/asagi }
+      - uses: yalongwastaken/git-koi@v1
+        with: { body: tea, output-dir: koi/tea }
+      - uses: yalongwastaken/git-koi@v1
+        with: { body: gold, output-dir: koi/gold }
+      - uses: yalongwastaken/git-koi@v1
+        with: { body: platinum, output-dir: koi/platinum }
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.13" }
+      - name: Build the pond
+        run: |
+          pip install --quiet pillow
+          python build.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Commit if anything changed
         shell: bash
         run: |
-          git add koi/koi.gif
+          git add koi/*/koi.gif assets
           if git diff --cached --quiet; then
-            echo "The koi is unchanged; nothing to commit."
+            echo "Nothing changed; nothing to commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit --quiet --message "koi: draw the day's koi"
+          git commit --quiet --message "koi: draw the day's pond"
           git push --quiet

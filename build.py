@@ -3,7 +3,7 @@
 Edit STACK below, then run:  py build.py
 Logos come from simple-icons; VS Code has no simple-icons logo, so it gets a code glyph.
 """
-import json, math, pathlib, re, urllib.request
+import base64, json, math, pathlib, random, re, subprocess, urllib.request
 from html import escape
 
 OUT = pathlib.Path(__file__).parent / "assets"
@@ -144,7 +144,95 @@ def stack(t):
     return svg(W, H, "".join(b), "Tech stack: " + ", ".join(n for n, _ in items), css)
 
 
+USER = "espinajc2004-max"
+BODIES = ["white", "black", "asagi", "tea", "gold", "platinum"]  # git-koi's six bodies, one GIF each in koi/<body>/
+POND = {"light": dict(water="#cfe3df", deep="#b9d6d1", pad="#7fb069", pad2="#5f9450", ripple="#ffffff"),
+        "dark": dict(water="#0b2a45", deep="#082036", pad="#3f7d4f", pad2="#2f6340", ripple="#4fb3b0")}
+
+
+def contributions():
+    """Last year's contribution total via the gh CLI (your gh login locally, GH_TOKEN in the Action)."""
+    q = "query($login:String!){user(login:$login){contributionsCollection{contributionCalendar{totalContributions}}}}"
+    out = subprocess.run(["gh", "api", "graphql", "-f", f"query={q}", "-F", f"login={USER}"],
+                         capture_output=True, text=True, check=True).stdout
+    return json.loads(out)["data"]["user"]["contributionsCollection"]["contributionCalendar"]["totalContributions"]
+
+
+def koi_count(total):
+    return max(3, min(14, total // 10 + 1))  # one koi per 10 contributions, kept between 3 and 14
+
+
+assert [koi_count(n) for n in (0, 83, 500)] == [3, 9, 14]
+
+
+def git_koi(body):
+    """(data URI, union bbox of the fish across all frames) for a git-koi GIF, or None if not drawn yet."""
+    path = pathlib.Path(__file__).parent / "koi" / body / "koi.gif"
+    if not path.exists():
+        return None
+    from PIL import Image, ImageSequence  # only needed when the GIFs exist (the Action installs it)
+    box = None
+    for frame in ImageSequence.Iterator(Image.open(path)):
+        b = frame.convert("RGBA").getchannel("A").getbbox()
+        if b:
+            box = b if box is None else (min(box[0], b[0]), min(box[1], b[1]), max(box[2], b[2]), max(box[3], b[3]))
+    return "data:image/gif;base64," + base64.b64encode(path.read_bytes()).decode(), box
+
+
+def pond(t, mode, total, fish):
+    W, H, ROWS, PAD = 900, 360, 3, 6
+    p, rnd = POND[mode], random.Random(7)  # fixed seed: same pond every build
+    n = koi_count(total)
+    cols = math.ceil(n / ROWS)
+    cw, ch = W / cols, H / ROWS
+    b = [f'<defs><clipPath id="card"><rect width="{W}" height="{H}" rx="18"/></clipPath>'
+         f'<radialGradient id="depth" cx=".5" cy=".55" r=".7"><stop offset="0" stop-color="{p["water"]}"/>'
+         f'<stop offset="1" stop-color="{p["deep"]}"/></radialGradient>']
+    sprites = []
+    for k, (uri, (x0, y0, x1, y1)) in enumerate(fish):
+        # Biggest scale whose spinning fish (a disc of radius r) still leaves room to swim inside a cell.
+        r_gif = math.hypot(x1 - x0, y1 - y0) / 2
+        s = min(.45, (ch / 2 - PAD - 8) / r_gif)
+        w, h = (x1 - x0) * s, (y1 - y0) * s
+        b.append(f'<svg id="k{k}" viewBox="{x0} {y0} {x1 - x0} {y1 - y0}" width="{w:.1f}" height="{h:.1f}">'
+                 f'<image href="{uri}" width="512" height="512" style="image-rendering:pixelated"/></svg>')
+        sprites.append((w, h, r_gif * s))
+    for i in range(n):  # extra koi reuse a body with its colours turned, so no two look alike
+        b.append(f'<filter id="hue{i}"><feColorMatrix type="hueRotate" values="{(i // len(fish)) * 75}"/></filter>')
+    b.append(f'</defs><g clip-path="url(#card)"><rect width="{W}" height="{H}" fill="url(#depth)"/>')
+    for i in range(6):  # ripples
+        x, y = rnd.uniform(60, W - 60), rnd.uniform(40, H - 40)
+        b.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="2" fill="none" stroke="{p["ripple"]}" stroke-width="1.2">'
+                 f'<animate attributeName="r" values="2;34" dur="5s" begin="{i * .9:.1f}s" repeatCount="indefinite"/>'
+                 f'<animate attributeName="opacity" values=".5;0" dur="5s" begin="{i * .9:.1f}s" repeatCount="indefinite"/></circle>')
+    for i in range(n):
+        k = i % len(fish)
+        w, h, r = sprites[k]
+        row, col = divmod(i, cols)
+        cx, cy = (col + .5) * cw, (row + .5) * ch
+        # Each koi loops inside its own cell, so two koi can never touch.
+        rx, ry = max(4, cw / 2 - r - PAD), max(4, ch / 2 - r - PAD)
+        sweep = (row + col) % 2
+        loop = f"M{cx + rx:.0f} {cy:.0f}A{rx:.0f} {ry:.0f} 0 1 {sweep} {cx - rx:.0f} {cy:.0f}A{rx:.0f} {ry:.0f} 0 1 {sweep} {cx + rx:.0f} {cy:.0f}"
+        perimeter = math.pi * (3 * (rx + ry) - math.sqrt((3 * rx + ry) * (rx + 3 * ry)))
+        dur = perimeter / rnd.uniform(16, 26)  # px per second
+        b.append(f'<g><animateMotion path="{loop}" dur="{dur:.1f}s" begin="-{rnd.uniform(0, dur):.1f}s" '
+                 f'repeatCount="indefinite" rotate="auto"/>'
+                 f'<use href="#k{k}" x="{-w / 2:.1f}" y="{-h / 2:.1f}" filter="url(#hue{i})"/></g>')
+    for cx, cy, r, rot in ((60, 40, 26, 20), (850, 322, 32, 200), (842, 34, 18, 110), (52, 328, 20, 300)):  # lily pads in the corners
+        a1, a2 = math.radians(rot), math.radians(rot + 330)
+        b.append(f'<path d="M{cx} {cy}L{cx + r * math.cos(a1):.1f} {cy + r * math.sin(a1):.1f}'
+                 f'A{r} {r} 0 1 1 {cx + r * math.cos(a2):.1f} {cy + r * math.sin(a2):.1f}Z" fill="{p["pad"]}"/>'
+                 f'<circle cx="{cx}" cy="{cy}" r="{r * .55:.1f}" fill="none" stroke="{p["pad2"]}" stroke-width="1"/>')
+    b.append("</g>")
+    return svg(W, H, "".join(b), f"An animated koi pond with {n} git-koi koi, one for every 10 of {total} GitHub contributions this year")
+
+
+fish = [f for f in map(git_koi, BODIES) if f]
+total = contributions() if fish else 0
 for mode, t in THEMES.items():
     (OUT / f"hero-{mode}.svg").write_text(hero(t), encoding="utf-8")
     (OUT / f"stack-{mode}.svg").write_text(stack(t), encoding="utf-8")
+    if fish:  # the koi GIFs come from git-koi in the Action; skip the pond until they exist
+        (OUT / f"pond-{mode}.svg").write_text(pond(t, mode, total, fish), encoding="utf-8")
     print("built", mode)
